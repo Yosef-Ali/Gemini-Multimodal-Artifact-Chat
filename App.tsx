@@ -4,6 +4,7 @@ import ArtifactPanel from './components/ArtifactPanel';
 import Sidebar from './components/Sidebar';
 import { Message, Conversation, Theme, Persona } from './types';
 import { generateResponse, generateImage, editImage, performOcr, generateTitleFromContent } from './services/geminiService';
+import { generateMixedResponse } from './services/deepseekService';
 import { personas, DEFAULT_PERSONA_ID } from './personas';
 
 const OLD_MESSAGES_KEY = 'gemini-artifact-chat-messages';
@@ -14,7 +15,7 @@ const THEME_KEY = 'gemini-theme';
 
 const defaultWelcomeMessage: Message = {
   role: 'model',
-  text: "Hello! I'm your multimodal assistant. You can ask me questions, provide an image, and request content for the artifact panel on the right. For example, try asking me to 'write a React component for a login form' or upload a picture of a landmark and ask what it is.",
+  text: "ሰላም! I'm your intelligent Amharic assistant with advanced reasoning capabilities. I can help you with:\n\n📄 **Amharic OCR** - Extract text from multiple images (TIFF, PNG, JPEG)\n🧠 **Document Analysis** - Chat about your extracted content with full context memory\n🇪🇹 **Amharic Expertise** - Native-level understanding of Ethiopian religious and cultural content\n\nUpload your Amharic documents or ask me questions in አማርኛ or English!",
 };
 
 const defaultArtifactContent = "<!-- Artifacts will appear here -->\n\n/*\n  When you ask me to create something like code, a document, or a plan, I'll update this panel with the complete result.\n*/";
@@ -25,7 +26,7 @@ const createNewConversation = (id: string, title = "New Chat"): Conversation => 
   messages: [defaultWelcomeMessage],
   artifactContent: defaultArtifactContent,
   isArtifactVisible: false,
-  model: 'gemini-2.5-flash',
+  model: 'deepseek-chat',
   personaId: DEFAULT_PERSONA_ID,
 });
 
@@ -36,6 +37,7 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [theme, setTheme] = useState<Theme>('light');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [extractedContent, setExtractedContent] = useState<string>('');
 
   useEffect(() => {
     const savedTheme = localStorage.getItem(THEME_KEY) as Theme;
@@ -72,7 +74,7 @@ const App: React.FC = () => {
         loadedConversations = JSON.parse(savedConversations).map((c: Conversation) => ({
           ...c,
           isArtifactVisible: c.isArtifactVisible ?? false,
-          model: c.model || 'gemini-2.5-flash',
+          model: 'deepseek-chat', // Force all conversations to Flash model
           personaId: c.personaId || DEFAULT_PERSONA_ID,
         }));
       } else {
@@ -182,7 +184,22 @@ const App: React.FC = () => {
     updateActiveConversation(conv => ({ ...conv, title: newTitle, messages: updatedMessages }));
 
     try {
-      const response = await generateResponse(text, activeConversation.artifactContent, activeConversation.model, activePersona.systemInstruction, images);
+      // Prepare conversation history for context
+      const conversationHistory = updatedMessages.map(msg => ({
+        role: msg.role,
+        text: msg.text
+      }));
+
+      // Use mixed response system (DeepSeek for chat + Gemini for artifacts)
+      const response = await generateMixedResponse(
+        text, 
+        activeConversation.artifactContent, 
+        activeConversation.model, 
+        activePersona.systemInstruction,
+        conversationHistory,
+        extractedContent || undefined,
+        images
+      );
       
       const modelMessage: Message = { role: 'model', text: response.chatResponse };
       
@@ -271,7 +288,7 @@ const App: React.FC = () => {
 
     const userMessage: Message = { 
         role: 'user', 
-        text: `Please extract and organize the text from these ${images.length} images.`,
+        text: `Please extract and organize the Amharic/English text from these ${images.length} image${images.length > 1 ? 's' : ''} using enhanced Amharic OCR processing.`,
         images: images.map(img => `data:${img.mimeType};base64,${img.data}`)
     };
     const updatedMessages = [...activeConversation.messages, userMessage];
@@ -282,9 +299,13 @@ const App: React.FC = () => {
 
     try {
         const extractedText = await performOcr(images);
+        
+        // Store extracted content for future chat context
+        setExtractedContent(extractedText);
+        
         const modelMessage: Message = {
             role: 'model',
-            text: `Here is the extracted and organized text:\n\n---\n\n${extractedText}`,
+            text: `Here is the extracted and enhanced Amharic/English text:\n\n---\n\n${extractedText}`,
         };
         updateActiveConversation(conv => ({...conv, messages: [...updatedMessages, modelMessage]}));
     } catch (err) {

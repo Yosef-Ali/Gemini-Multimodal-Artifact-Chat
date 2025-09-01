@@ -66,7 +66,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ messages, onSendMessage, onGenera
   const handleImageEditClick = () => {
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
-    fileInput.accept = 'image/png, image/jpeg, image/webp, image/tiff';
+    fileInput.accept = 'image/png,image/jpeg,image/jpg,image/webp,image/tiff,image/tif,image/bmp';
     fileInput.onchange = async (e) => {
         const target = e.target as HTMLInputElement;
         const file = target.files?.[0];
@@ -78,7 +78,8 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ messages, onSendMessage, onGenera
                     onEditImage(editPrompt, imageData);
                 } catch (error) {
                     console.error("Error processing image for editing:", error);
-                    alert("Failed to read the image file. Please try another image.");
+                    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                    alert(`Failed to process image: ${errorMessage}\n\nSupported formats: PNG, JPEG, TIFF, WebP, BMP`);
                 }
             }
         }
@@ -89,19 +90,32 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ messages, onSendMessage, onGenera
   const handleOcrClick = () => {
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
-    fileInput.accept = 'image/png, image/jpeg, image/webp, image/tiff';
+    fileInput.accept = 'image/png,image/jpeg,image/jpg,image/webp,image/tiff,image/tif,image/bmp';
     fileInput.multiple = true;
     fileInput.onchange = async (e) => {
         const target = e.target as HTMLInputElement;
         const files = target.files;
         if (files && files.length > 0) {
+            // Show loading state immediately
+            const loadingToast = document.createElement('div');
+            loadingToast.className = 'fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+            loadingToast.textContent = `Processing ${files.length} image${files.length > 1 ? 's' : ''} for Amharic OCR...`;
+            document.body.appendChild(loadingToast);
+            
             try {
                 const imagePromises = Array.from(files).map(file => fileToBase64(file));
                 const imagesData = await Promise.all(imagePromises);
                 onPerformOcr(imagesData);
+                
+                // Remove loading toast
+                document.body.removeChild(loadingToast);
             } catch (error) {
                 console.error("Error processing images for OCR:", error);
-                alert("Failed to read the image files. Please try another image.");
+                document.body.removeChild(loadingToast);
+                
+                // Better error message
+                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                alert(`Failed to process image files: ${errorMessage}\n\nSupported formats: PNG, JPEG, TIFF, WebP, BMP`);
             }
         }
     };
@@ -157,19 +171,22 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ messages, onSendMessage, onGenera
                     <div className="absolute top-full left-0 mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-10">
                         <ul className="py-1">
                             <li>
-                                <a href="#" onClick={(e) => { e.preventDefault(); onModelChange('gemini-2.5-flash'); setIsModelSelectorOpen(false); }} className={`block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 ${model === 'gemini-2.5-flash' ? 'bg-gray-100 dark:bg-gray-700 font-semibold' : ''}`}>
-                                    gemini-2.5-flash
-                                    <span className="text-xs text-gray-500 dark:text-gray-400 block font-normal">Recommended for most tasks</span>
+                                <a href="#" onClick={(e) => { e.preventDefault(); onModelChange('deepseek-chat'); setIsModelSelectorOpen(false); }} className={`block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 ${model === 'deepseek-chat' ? 'bg-gray-100 dark:bg-gray-700 font-semibold' : ''}`}>
+                                    🧠 deepseek-chat
+                                    <span className="text-xs text-gray-500 dark:text-gray-400 block font-normal">🇪🇹 Smart Amharic reasoning with memory</span>
                                 </a>
                             </li>
                             <li>
-                                <div 
-                                    className="block px-4 py-2 text-sm text-gray-400 dark:text-gray-500 cursor-not-allowed"
-                                    title="This model is not available in the current configuration."
-                                >
-                                    gemini-1.5-pro-latest
-                                    <span className="text-xs block">Currently unavailable</span>
-                                </div>
+                                <a href="#" onClick={(e) => { e.preventDefault(); onModelChange('openrouter/deepseek'); setIsModelSelectorOpen(false); }} className={`block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 ${model === 'openrouter/deepseek' ? 'bg-gray-100 dark:bg-gray-700 font-semibold' : ''}`}>
+                                    💰 openrouter/deepseek
+                                    <span className="text-xs text-gray-500 dark:text-gray-400 block font-normal">Cost-effective alternative via OpenRouter</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#" onClick={(e) => { e.preventDefault(); onModelChange('gemini-1.5-flash-latest'); setIsModelSelectorOpen(false); }} className={`block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 ${model === 'gemini-1.5-flash-latest' ? 'bg-gray-100 dark:bg-gray-700 font-semibold' : ''}`}>
+                                    gemini-1.5-flash-latest
+                                    <span className="text-xs text-gray-500 dark:text-gray-400 block font-normal">📷 For images & artifacts only</span>
+                                </a>
                             </li>
                         </ul>
                     </div>
@@ -206,12 +223,24 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ messages, onSendMessage, onGenera
             <div className="w-full max-w-2xl">
               <ChatInput onSendMessage={onSendMessage} isLoading={isLoading} />
               <div className="flex items-center justify-center gap-2 mt-4 flex-wrap">
-                  <SuggestionButton icon={<DocumentTextIcon className="w-4 h-4 text-cyan-500" />} text="OCR for Image" onClick={handleOcrClick} disabled={isLoading} />
-                  <SuggestionButton icon={<PencilIcon className="w-4 h-4 text-yellow-500" />} text="Image Edit" onClick={handleImageEditClick} disabled={isLoading} />
-                  <SuggestionButton icon={<GlobeIcon className="w-4 h-4 text-blue-500" />} text="Web Dev" />
-                  <SuggestionButton icon={<AcademicCapIcon className="w-4 h-4 text-green-500" />} text="Deep Research" />
-                  <SuggestionButton icon={<SparklesIcon className="w-4 h-4 text-purple-500" />} text="Image Generation" onClick={handleImageGenerationClick} disabled={isLoading} />
-                  <SuggestionButton icon={<DotsHorizontalIcon className="w-4 h-4 text-gray-500" />} text="More" />
+                  <SuggestionButton 
+                    icon={<DocumentTextIcon className="w-4 h-4 text-cyan-500" />} 
+                    text="📄 Amharic OCR" 
+                    onClick={handleOcrClick} 
+                    disabled={isLoading} 
+                  />
+                  <SuggestionButton 
+                    icon={<PencilIcon className="w-4 h-4 text-yellow-500" />} 
+                    text="✏️ Image Edit" 
+                    onClick={handleImageEditClick} 
+                    disabled={isLoading} 
+                  />
+                  <SuggestionButton 
+                    icon={<SparklesIcon className="w-4 h-4 text-purple-500" />} 
+                    text="🎨 Generate Image" 
+                    onClick={handleImageGenerationClick} 
+                    disabled={isLoading} 
+                  />
               </div>
             </div>
           </div>
@@ -227,12 +256,24 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ messages, onSendMessage, onGenera
           <div className="w-full max-w-3xl mx-auto">
             <ChatInput onSendMessage={onSendMessage} isLoading={isLoading} />
              <div className="flex items-center justify-center gap-2 mt-4 flex-wrap">
-                  <SuggestionButton icon={<DocumentTextIcon className="w-4 h-4 text-cyan-500" />} text="OCR for Image" onClick={handleOcrClick} disabled={isLoading} />
-                  <SuggestionButton icon={<PencilIcon className="w-4 h-4 text-yellow-500" />} text="Image Edit" onClick={handleImageEditClick} disabled={isLoading} />
-                  <SuggestionButton icon={<GlobeIcon className="w-4 h-4 text-blue-500" />} text="Web Dev" />
-                  <SuggestionButton icon={<AcademicCapIcon className="w-4 h-4 text-green-500" />} text="Deep Research" />
-                  <SuggestionButton icon={<SparklesIcon className="w-4 h-4 text-purple-500" />} text="Image Generation" onClick={handleImageGenerationClick} disabled={isLoading} />
-                  <SuggestionButton icon={<DotsHorizontalIcon className="w-4 h-4 text-gray-500" />} text="More" />
+                  <SuggestionButton 
+                    icon={<DocumentTextIcon className="w-4 h-4 text-cyan-500" />} 
+                    text="📄 Amharic OCR" 
+                    onClick={handleOcrClick} 
+                    disabled={isLoading} 
+                  />
+                  <SuggestionButton 
+                    icon={<PencilIcon className="w-4 h-4 text-yellow-500" />} 
+                    text="✏️ Image Edit" 
+                    onClick={handleImageEditClick} 
+                    disabled={isLoading} 
+                  />
+                  <SuggestionButton 
+                    icon={<SparklesIcon className="w-4 h-4 text-purple-500" />} 
+                    text="🎨 Generate Image" 
+                    onClick={handleImageGenerationClick} 
+                    disabled={isLoading} 
+                  />
             </div>
           </div>
         </footer>

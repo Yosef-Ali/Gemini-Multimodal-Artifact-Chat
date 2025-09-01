@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useCallback } from 'react';
-import { PlusIcon, MicrophoneIcon, XIcon, ThinkingIcon, GlobeIcon, ChevronDownIcon } from './Icons';
+import { PlusIcon, MicrophoneIcon, XIcon, ThinkingIcon, GlobeIcon, ChevronDownIcon, DocumentTextIcon } from './Icons';
 import { fileToBase64 } from '../utils/file';
 
 interface ChatInputProps {
@@ -42,7 +42,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files) {
-      const newImages = Array.from(files).map(file => ({
+      const newImages = Array.from(files).map((file: File) => ({
         file,
         preview: URL.createObjectURL(file)
       }));
@@ -70,13 +70,26 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
   return (
     <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-3 border border-gray-200 dark:border-gray-700 shadow-sm transition-all focus-within:shadow-md">
       {images.length > 0 && (
-        <div className="flex flex-wrap gap-3 m-2">
+        <div className="flex flex-wrap gap-3 m-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+          <div className="w-full flex items-center gap-2 mb-2">
+            <DocumentTextIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
+              Ready for Amharic OCR ({images.length} image{images.length > 1 ? 's' : ''})
+            </span>
+          </div>
           {images.map((image, index) => (
             <div key={index} className="relative w-20 h-20">
-              <img src={image.preview} alt={`Preview ${index + 1}`} className="w-full h-full object-cover rounded-lg" />
-              <button onClick={() => removeImage(index)} className="absolute -top-2 -right-2 bg-gray-700 rounded-full p-1 text-white hover:bg-red-500 transition-colors">
-                <XIcon className="w-4 h-4" />
+              <img src={image.preview} alt={`Preview ${index + 1}`} className="w-full h-full object-cover rounded-lg border border-gray-200 dark:border-gray-600" />
+              <button 
+                onClick={() => removeImage(index)} 
+                className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 rounded-full p-1 text-white shadow-lg transition-colors"
+                aria-label={`Remove image ${index + 1}`}
+              >
+                <XIcon className="w-3 h-3" />
               </button>
+              <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs text-center py-0.5 rounded-b-lg">
+                {index + 1}
+              </div>
             </div>
           ))}
         </div>
@@ -93,7 +106,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
                         handleSend();
                     }
                 }}
-                placeholder="How can I help you today?"
+                placeholder="Ask about your Amharic documents or chat in አማርኛ..."
                 className="w-full bg-transparent text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none resize-none"
                 rows={1}
                 style={{maxHeight: '200px'}}
@@ -105,25 +118,33 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
                     ref={fileInputRef}
                     onChange={handleFileChange}
                     className="hidden"
-                    accept="image/png, image/jpeg, image/webp, image/tiff"
+                    accept="image/png,image/jpeg,image/jpg,image/webp,image/tiff,image/tif,image/bmp,image/gif"
                     multiple
                 />
-                <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="flex items-center justify-center w-8 h-8 text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
-                    disabled={isLoading}
-                    aria-label="Attach file"
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex items-center gap-1.5 px-3 h-8 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={isLoading}
+                        aria-label="Upload images (PNG, JPEG, TIFF, WebP)"
+                        title="Upload multiple images for Amharic OCR"
+                    >
+                        <PlusIcon className="w-4 h-4" />
+                        <span>Images</span>
+                    </button>
+                    {images.length > 0 && (
+                        <span className="text-xs text-gray-500 dark:text-gray-400 bg-blue-100 dark:bg-blue-900/30 px-2 py-1 rounded">
+                            {images.length} image{images.length > 1 ? 's' : ''} ready
+                        </span>
+                    )}
+                </div>
+                 <button 
+                    className="flex items-center gap-1.5 px-3 h-8 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                    title="Advanced reasoning mode with Amharic expertise"
                 >
-                    <PlusIcon className="w-5 h-5" />
-                </button>
-                 <button className="flex items-center gap-1.5 px-3 h-8 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors">
-                    <ThinkingIcon className="w-5 h-5" />
-                    <span>Thinking</span>
+                    <ThinkingIcon className="w-4 h-4" />
+                    <span>Think</span>
                     <ChevronDownIcon className="w-4 h-4" />
-                </button>
-                <button className="flex items-center gap-1.5 px-3 h-8 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors">
-                    <GlobeIcon className="w-5 h-5" />
-                    <span>Search</span>
                 </button>
             </div>
         </div>
