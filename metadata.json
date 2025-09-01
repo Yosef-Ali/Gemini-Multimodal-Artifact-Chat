@@ -1,0 +1,5 @@
+{
+  "name": "Gemini Multimodal Artifact Chat",
+  "description": "A sophisticated, Claude-like chat application that leverages Gemini's multimodal capabilities. Users can interact with text and images, and the AI can generate both conversational responses and structured 'artifacts' like code or documents in a separate panel.",
+  "requestFramePermissions": []
+}
